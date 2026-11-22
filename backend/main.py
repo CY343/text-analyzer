@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from transformers import pipeline
+
+from database import Analysis, SessionLocal
 
 app = FastAPI()
 
@@ -10,6 +13,12 @@ sentiment_model = pipeline(
     model="distilbert-base-uncased-finetuned-sst-2-english",
 )
 
+def get_db():
+    db = SessionLocal()
+    try:
+      yield db
+    finally:
+      db.close()
 
 class TextInput(BaseModel):
     text: str
@@ -21,10 +30,27 @@ def home():
 
 
 @app.post("/analyze")
-def analyze(data: TextInput):
+def analyze(data: TextInput, db: Session = Depends(get_db)):
     result = sentiment_model(data.text)[0]
-    return {
-        "text": data.text,
-        "label": result["label"],
-        "score": round(result["score"], 4),
-    }
+    label = result["label"]
+    score = round(result["score"], 4)
+
+    record = Analysis(text=data.text, label=label, score=score)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return {"id": record.id, "text": record.text, "label": record.label, "score": record.score}
+
+@app.get("/history")
+def history(db: Session = Depends(get_db)):
+   rows = db.query(Analysis).order_by(Analysis.id.desc()).all()
+   return[
+      {
+        "id": r.id,
+        "text": r.text,
+        "label": r.label,
+        "score": r.score,
+        "created_at": r.created_at,
+      }
+      for r in rows
+   ]
