@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -6,6 +7,13 @@ from transformers import pipeline
 from database import Analysis, SessionLocal
 
 app = FastAPI()
+
+app.add_middleware(
+   CORSMiddleware,
+   allow_origins=["http://localhost:5173"],
+   allow_methods=["*"],
+   allow_headers=["*"],
+)
 
 # Loaded once when the server starts (not on every request)
 sentiment_model = pipeline(
