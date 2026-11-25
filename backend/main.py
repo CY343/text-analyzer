@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from transformers import pipeline
 
 from database import Analysis, SessionLocal
+import time
 
 app = FastAPI()
 
@@ -39,6 +40,7 @@ def home():
 
 @app.post("/analyze")
 def analyze(data: TextInput, db: Session = Depends(get_db)):
+    time.sleep(3)
     result = sentiment_model(data.text)[0]
     label = result["label"]
     score = round(result["score"], 4)
