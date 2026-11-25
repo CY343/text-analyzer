@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API_URL = "http://127.0.0.1:8080";
 
 function App() {
   const [text, setText] = useState("");
   const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+
+async function loadHistory() {
+  try {
+    const response = await fetch(`${API_URL}/history`);
+    const data = await response.json();
+    setHistory(data);
+  } catch {
+    console.log("Could not load history. Is the backend running?");
+  }
+}
+  useEffect(() => {
+    loadHistory();
+  },[])
 
   async function handleAnalyze() {
     const response = await fetch(`${API_URL}/analyze`, {
@@ -14,7 +28,8 @@ function App() {
     });
     const data = await response.json();
     setResult(data);
-  }
+    await loadHistory();
+  } 
 
   return (
     <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "sans-serif" }}>
@@ -33,6 +48,14 @@ function App() {
           Result: <b>{result.label}</b> ({result.score})
         </p>
       )}
+      <h2>History</h2>
+      <ul>
+        {history.map((item) => (
+        <li key= {item.id}>
+          {item.text}: <b>{item.label}</b> ({item.score})
+          </li>
+          ))}
+          </ul>
     </div>
   );
 }
