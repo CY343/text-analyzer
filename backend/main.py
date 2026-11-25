@@ -1,19 +1,18 @@
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from transformers import pipeline
 
 from database import Analysis, SessionLocal
-import time
 
 app = FastAPI()
 
 app.add_middleware(
-   CORSMiddleware,
-   allow_origins=["http://localhost:5173"],
-   allow_methods=["*"],
-   allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Loaded once when the server starts (not on every request)
@@ -22,12 +21,14 @@ sentiment_model = pipeline(
     model="distilbert-base-uncased-finetuned-sst-2-english",
 )
 
+
 def get_db():
     db = SessionLocal()
     try:
-      yield db
+        yield db
     finally:
-      db.close()
+        db.close()
+
 
 class TextInput(BaseModel):
     text: str
@@ -40,7 +41,6 @@ def home():
 
 @app.post("/analyze")
 def analyze(data: TextInput, db: Session = Depends(get_db)):
-    time.sleep(3)
     result = sentiment_model(data.text)[0]
     label = result["label"]
     score = round(result["score"], 4)
@@ -51,16 +51,17 @@ def analyze(data: TextInput, db: Session = Depends(get_db)):
     db.refresh(record)
     return {"id": record.id, "text": record.text, "label": record.label, "score": record.score}
 
+
 @app.get("/history")
 def history(db: Session = Depends(get_db)):
-   rows = db.query(Analysis).order_by(Analysis.id.desc()).all()
-   return[
-      {
-        "id": r.id,
-        "text": r.text,
-        "label": r.label,
-        "score": r.score,
-        "created_at": r.created_at,
-      }
-      for r in rows
-   ]
+    rows = db.query(Analysis).order_by(Analysis.id.desc()).all()
+    return [
+        {
+            "id": r.id,
+            "text": r.text,
+            "label": r.label,
+            "score": r.score,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
